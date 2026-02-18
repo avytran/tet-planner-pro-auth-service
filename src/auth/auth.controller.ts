@@ -4,6 +4,7 @@ import { RegisterDto } from "./dto/register.dto";
 import { User } from "./interfaces/user.interface";
 import { JwtPayload } from "./interfaces/jwtPayload.interface";
 import { JwtAuthGuard } from "./jwt/jwtAuth.guard";
+import { RefreshTokenDto } from "./dto/refreshToken.dto";
 
 @Controller("v1/auth")
 export class AuthController {
@@ -24,5 +25,10 @@ export class AuthController {
     async profile(@Req() req: any) {
         const user = req.user as JwtPayload;
         return this.authService.getProfile(user);
+    }
+
+    @Post("refresh-token")
+    async refreshToken(@Body() dto: RefreshTokenDto) {
+        return this.authService.refreshToken(dto.refreshToken);
     }
 }
