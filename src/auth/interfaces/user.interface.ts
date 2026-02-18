@@ -8,3 +8,12 @@ export interface IUser extends Document {
     created_at: Date;
     updated_at: Date;
 }
+
+export interface User {
+    id: string;
+    email: string;
+    fullName: string;
+    totalBudget: number;
+    createdAt: Date;
+    updatedAt: Date;
+}

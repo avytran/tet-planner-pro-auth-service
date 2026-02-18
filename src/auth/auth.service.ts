@@ -2,13 +2,18 @@ import { Model } from "mongoose";
 import { Injectable, Inject } from "@nestjs/common";
 import { IUser } from "./interfaces/user.interface";
 import { RegisterDto } from "./dto/register.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import * as bcrypt from 'bcrypt';
-import { User } from "./types/user";
+import { User } from "./interfaces/user.interface";
+import { JwtService } from "@nestjs/jwt";
+import { jwtConstants } from "./jwt/jwt.constants";
+import { JwtPayload } from "./interfaces/jwtPayload.interface";
 
 @Injectable()
 export class AuthService {
-    constructor(@Inject("USER_MODEL") private readonly userModel: Model<IUser>) { }
+    constructor(@Inject("USER_MODEL") private readonly userModel: Model<IUser>,
+        private jwtService: JwtService,
+    ) { }
 
     async register(dto: RegisterDto): Promise<User> {
         const existingUser = await this.userModel.findOne({ email: dto.email });
@@ -33,5 +38,53 @@ export class AuthService {
             createdAt: user.created_at,
             updatedAt: user.updated_at
         };
+    }
+
+    async login(email: string, password: string) {
+        const user = await this.userModel.findOne({ email });
+        if (!user) throw new UnauthorizedException();
+
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) throw new UnauthorizedException();
+
+        const { accessToken, refreshToken} = this.generateTokens(user);
+
+        return {
+            status: "success",
+            data: {
+                accessToken,
+                refreshToken,
+                user: {
+                    id: user.id,
+                    name: user.full_name,
+                    email: user.email,
+                    createdAt: user.created_at,
+                    updatedAt: user.updated_at
+                }
+            }
+        }
+    }
+
+    async refreshToken(user: JwtPayload) {
+        return this.generateTokens(user);
+    }
+
+    private generateTokens(user: any) {
+        const payload: JwtPayload = {
+            sub: user.sub,
+            email: user.email,
+        };
+
+        const accessToken = this.jwtService.sign(payload, {
+            secret: jwtConstants.accessSecret,
+            expiresIn: jwtConstants.accessExpiresIn,
+        });
+
+        const refreshToken = this.jwtService.sign(payload, {
+            secret: jwtConstants.refreshSecret,
+            expiresIn: jwtConstants.refreshExpiresIn,
+        });
+
+        return { accessToken, refreshToken };
     }
 }
