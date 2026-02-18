@@ -47,7 +47,12 @@ export class AuthService {
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) throw new UnauthorizedException();
 
-        const { accessToken, refreshToken} = this.generateTokens(user);
+        const payload: JwtPayload = {
+            sub: user._id.toString(),
+            email: user.email,
+        };
+
+        const { accessToken, refreshToken } = this.generateTokens(payload);
 
         return {
             status: "success",
@@ -69,7 +74,7 @@ export class AuthService {
         return this.generateTokens(user);
     }
 
-    private generateTokens(user: any) {
+    private generateTokens(user: JwtPayload) {
         const payload: JwtPayload = {
             sub: user.sub,
             email: user.email,
@@ -86,5 +91,17 @@ export class AuthService {
         });
 
         return { accessToken, refreshToken };
+    }
+
+    async getProfile(user: JwtPayload) {
+        const profile = await this.userModel.findById(user.sub);
+
+        return {
+            id: profile?.id,
+            fullName: profile?.full_name,
+            email: profile?.email,
+            createdAt: profile?.created_at,
+            updatedAt: profile?.updated_at
+        };
     }
 }
