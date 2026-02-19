@@ -7,14 +7,27 @@ import { JwtModule } from "@nestjs/jwt";
 import { jwtConstants } from "./jwt/jwt.constants";
 import { JwtStrategy } from "./jwt/jwt.strategy";
 import { RefreshTokenStrategy } from "./jwt/refreshToken.strategy";
-
+import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
     imports: [
         DatabaseModule,
-        JwtModule.register({}),
+
+        ConfigModule.forRoot(),
+
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: () => ({
+                privateKey: jwtConstants.privateKey.replace(/\\n/g, '\n'),
+                publicKey: jwtConstants.publicKey.replace(/\\n/g, '\n'),
+                signOptions: {
+                    algorithm: 'RS256'
+                },
+            }),
+        })
     ],
     controllers: [AuthController],
     providers: [AuthService, JwtStrategy, RefreshTokenStrategy, ...userProviders],
 })
-export class AuthModule {}
+export class AuthModule { }

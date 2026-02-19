@@ -8,11 +8,13 @@ import { User } from "./interfaces/user.interface";
 import { JwtService } from "@nestjs/jwt";
 import { jwtConstants } from "./jwt/jwt.constants";
 import { JwtPayload } from "./interfaces/jwtPayload.interface";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthService {
     constructor(@Inject("USER_MODEL") private readonly userModel: Model<IUser>,
         private jwtService: JwtService,
+        private configService: ConfigService
     ) { }
 
     async register(dto: RegisterDto): Promise<User> {
@@ -73,7 +75,10 @@ export class AuthService {
     async refreshToken(refreshToken: string) {
         try {
             const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-                secret: jwtConstants.refreshSecret,
+                publicKey: this.configService
+                    .get<string>("JWT_PUBLIC_KEY")
+                    ?.replace(/\\n/g, "\n"),
+                algorithms: ["RS256"],
             });
 
             return this.generateTokens({
@@ -92,14 +97,15 @@ export class AuthService {
         };
 
         const accessToken = this.jwtService.sign(payload, {
-            secret: jwtConstants.accessSecret,
-            expiresIn: jwtConstants.accessExpiresIn,
+            expiresIn: jwtConstants.accessTokenExpiresIn,
+            algorithm: "RS256",
         });
 
         const refreshToken = this.jwtService.sign(payload, {
-            secret: jwtConstants.refreshSecret,
-            expiresIn: jwtConstants.refreshExpiresIn,
+            expiresIn: jwtConstants.refreshTokenExpiresIn,
+            algorithm: "RS256",
         });
+
 
         return { accessToken, refreshToken };
     }
