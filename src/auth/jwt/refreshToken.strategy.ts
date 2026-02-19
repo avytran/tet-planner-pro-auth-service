@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { jwtConstants } from "./jwt.constants";
 import { JwtPayload } from "../interfaces/jwtPayload.interface";
+import { jwtConstants } from "./jwt.constants";
 
 @Injectable()
 export class RefreshTokenStrategy extends PassportStrategy(
@@ -12,7 +12,8 @@ export class RefreshTokenStrategy extends PassportStrategy(
     constructor() {
         super({
             jwtFromRequest: ExtractJwt.fromBodyField("refresh_token"),
-            secretOrKey: jwtConstants.refreshSecret,
+            secretOrKey: jwtConstants.publicKey.replace(/\\n/g, '\n'),
+            algorithms: ['RS256'],
         });
     }
 

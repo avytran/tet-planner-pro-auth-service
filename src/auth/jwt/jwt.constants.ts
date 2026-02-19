@@ -1,6 +1,17 @@
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const { 
+  JWT_PRIVATE_KEY,
+  JWT_PUBLIC_KEY,
+  ACCESS_TOKEN_EXPIRES_IN,
+  REFRESH_TOKEN_EXPIRES_IN,
+} = process.env;
+
 export const jwtConstants = {
-  accessSecret: process.env.JWT_ACCESS_SECRET || "accessSecret123",
-  refreshSecret: process.env.JWT_REFRESH_SECRET || "refreshSecret123",
-  accessExpiresIn: 900,
-  refreshExpiresIn: 60 * 60 * 24 * 7,
+  privateKey: JWT_PRIVATE_KEY as string,
+  publicKey: JWT_PUBLIC_KEY as string,
+  accessTokenExpiresIn: ACCESS_TOKEN_EXPIRES_IN as `${number}${'s'|'m'|'h'|'d'|'y'}`,
+  refreshTokenExpiresIn: REFRESH_TOKEN_EXPIRES_IN as `${number}${'s'|'m'|'h'|'d'|'y'}`,
 };
