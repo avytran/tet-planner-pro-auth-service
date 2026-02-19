@@ -5,13 +5,14 @@ import { User } from "./interfaces/user.interface";
 import { JwtPayload } from "./interfaces/jwtPayload.interface";
 import { JwtAuthGuard } from "./jwt/jwtAuth.guard";
 import { RefreshTokenDto } from "./dto/refreshToken.dto";
+import { DbResult } from "./interfaces/dbResult";
 
 @Controller("v1/auth")
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
     @Post("register")
-    async register(@Body() dto: RegisterDto): Promise<User> {
+    async register(@Body() dto: RegisterDto): Promise<DbResult<User>> {
         return this.authService.register(dto);
     }
 

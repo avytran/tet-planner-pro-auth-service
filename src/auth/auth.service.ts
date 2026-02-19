@@ -9,6 +9,7 @@ import { JwtService } from "@nestjs/jwt";
 import { jwtConstants } from "./jwt/jwt.constants";
 import { JwtPayload } from "./interfaces/jwtPayload.interface";
 import { ConfigService } from "@nestjs/config";
+import { DbResult } from "./interfaces/dbResult";
 
 @Injectable()
 export class AuthService {
@@ -17,10 +18,13 @@ export class AuthService {
         private configService: ConfigService
     ) { }
 
-    async register(dto: RegisterDto): Promise<User> {
+    async register(dto: RegisterDto): Promise<DbResult<User>> {
         const existingUser = await this.userModel.findOne({ email: dto.email });
         if (existingUser) {
-            throw new BadRequestException('Email already exists');
+            throw new BadRequestException({
+                status: 'error',
+                message: 'Email already exists',
+            });
         }
 
         const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -33,21 +37,30 @@ export class AuthService {
         })
 
         return {
-            id: user._id.toString(),
-            email: user.email,
-            fullName: user.full_name,
-            totalBudget: user.total_budget,
-            createdAt: user.created_at,
-            updatedAt: user.updated_at
+            status: "success",
+            data: {
+                id: user._id.toString(),
+                email: user.email,
+                fullName: user.full_name,
+                totalBudget: user.total_budget,
+                createdAt: user.created_at,
+                updatedAt: user.updated_at
+            }
         };
     }
 
     async login(email: string, password: string) {
         const user = await this.userModel.findOne({ email });
-        if (!user) throw new UnauthorizedException();
+        if (!user) throw new UnauthorizedException({
+            "status": "error",
+            "message": "Unauthorized"
+        });
 
         const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) throw new UnauthorizedException();
+        if (!isMatch) throw new UnauthorizedException({
+            "status": "error",
+            "message": "Unauthorized"
+        });
 
         const payload: JwtPayload = {
             sub: user._id.toString(),
@@ -81,12 +94,20 @@ export class AuthService {
                 algorithms: ["RS256"],
             });
 
-            return this.generateTokens({
+            const tokens = this.generateTokens({
                 sub: payload.sub,
                 email: payload.email,
             });
+
+            return {
+                status: "success",
+                data: tokens
+            }
         } catch (error) {
-            throw new UnauthorizedException("Invalid refresh token");
+            throw new UnauthorizedException({
+                "status": "error",
+                "message": "Invalid refresh token"
+            });
         }
     }
 
@@ -114,11 +135,14 @@ export class AuthService {
         const profile = await this.userModel.findById(user.sub);
 
         return {
-            id: profile?.id,
-            fullName: profile?.full_name,
-            email: profile?.email,
-            createdAt: profile?.created_at,
-            updatedAt: profile?.updated_at
-        };
+            status: "success",
+            data: {
+                id: profile?.id,
+                fullName: profile?.full_name,
+                email: profile?.email,
+                createdAt: profile?.created_at,
+                updatedAt: profile?.updated_at
+            }
+        }
     }
 }
