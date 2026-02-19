@@ -8,6 +8,7 @@ import { jwtConstants } from "./jwt/jwt.constants";
 import { JwtStrategy } from "./jwt/jwt.strategy";
 import { RefreshTokenStrategy } from "./jwt/refreshToken.strategy";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { JwksModule } from "./jwks/jwks.module";
 
 @Module({
     imports: [
@@ -25,7 +26,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
                     algorithm: 'RS256'
                 },
             }),
-        })
+        }),
+        JwksModule,
     ],
     controllers: [AuthController],
     providers: [AuthService, JwtStrategy, RefreshTokenStrategy, ...userProviders],
