@@ -76,7 +76,7 @@ export class AuthService {
                 refreshToken,
                 user: {
                     id: user.id,
-                    name: user.full_name,
+                    fullName: user.full_name,
                     email: user.email,
                     createdAt: user.created_at,
                     updatedAt: user.updated_at
