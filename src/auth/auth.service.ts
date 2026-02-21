@@ -12,12 +12,14 @@ import { ConfigService } from "@nestjs/config";
 import { DbResult } from "./interfaces/dbResult";
 import { ForgotPasswordDto } from "./dto/forgotPassword.dto";
 import { ResetPasswordDto } from "./dto/resetPassword.dto";
+import { MailService } from "src/mail/mail.service";
 
 @Injectable()
 export class AuthService {
     constructor(@Inject("USER_MODEL") private readonly userModel: Model<IUser>,
         private jwtService: JwtService,
-        private configService: ConfigService
+        private configService: ConfigService,
+        private mailService: MailService,
     ) { }
 
     async register(dto: RegisterDto): Promise<DbResult<User>> {
@@ -177,10 +179,11 @@ export class AuthService {
             }
         )
 
-        const resetLink = `${jwtConstants.clientURL}?token=${token}`;
+        const resetLink = `${jwtConstants.clientURL}/reset-password?token=${token}`;
 
-        // TODO: send email
         console.log(resetLink);
+
+        // await this.mailService.sendResetPasswordEmail(user.email, resetLink);
 
         return {
             status: "success",

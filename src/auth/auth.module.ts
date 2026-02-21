@@ -9,6 +9,7 @@ import { JwtStrategy } from "./jwt/jwt.strategy";
 import { RefreshTokenStrategy } from "./jwt/refreshToken.strategy";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwksModule } from "./jwks/jwks.module";
+import { MailService } from "../mail/mail.service";
 
 @Module({
     imports: [
@@ -30,6 +31,6 @@ import { JwksModule } from "./jwks/jwks.module";
         JwksModule,
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, RefreshTokenStrategy, ...userProviders],
+    providers: [AuthService, JwtStrategy, RefreshTokenStrategy, ...userProviders, MailService],
 })
 export class AuthModule { }
