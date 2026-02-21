@@ -10,12 +10,16 @@ import { jwtConstants } from "./jwt/jwt.constants";
 import { JwtPayload } from "./interfaces/jwtPayload.interface";
 import { ConfigService } from "@nestjs/config";
 import { DbResult } from "./interfaces/dbResult";
+import { ForgotPasswordDto } from "./dto/forgotPassword.dto";
+import { ResetPasswordDto } from "./dto/resetPassword.dto";
+import { MailService } from "src/mail/mail.service";
 
 @Injectable()
 export class AuthService {
     constructor(@Inject("USER_MODEL") private readonly userModel: Model<IUser>,
         private jwtService: JwtService,
-        private configService: ConfigService
+        private configService: ConfigService,
+        private mailService: MailService,
     ) { }
 
     async register(dto: RegisterDto): Promise<DbResult<User>> {
@@ -33,7 +37,8 @@ export class AuthService {
             email: dto.email,
             password_hash: passwordHash,
             full_name: dto.fullName,
-            total_budget: 0
+            total_budget: 0,
+            password_updated_at: new Date(),
         })
 
         return {
@@ -43,6 +48,7 @@ export class AuthService {
                 email: user.email,
                 fullName: user.full_name,
                 totalBudget: user.total_budget,
+                passwordUpdatedAt: user.password_updated_at,
                 createdAt: user.created_at,
                 updatedAt: user.updated_at
             }
@@ -78,6 +84,7 @@ export class AuthService {
                     id: user.id,
                     fullName: user.full_name,
                     email: user.email,
+                    passwordUpdatedAt: user.password_updated_at,
                     createdAt: user.created_at,
                     updatedAt: user.updated_at
                 }
@@ -140,9 +147,116 @@ export class AuthService {
                 id: profile?.id,
                 fullName: profile?.full_name,
                 email: profile?.email,
+                passwordUpdatedAt: profile?.password_updated_at,
                 createdAt: profile?.created_at,
                 updatedAt: profile?.updated_at
             }
         }
+    }
+
+    async forgotPassword(dto: ForgotPasswordDto) {
+        const user = await this.userModel.findOne({ email: dto.email });
+
+        if (!user) {
+            return {
+                status: "success",
+                data: {
+                    message: "If email exists, reset link has been sent",
+                },
+            };
+        }
+
+        const token = await this.jwtService.signAsync(
+            {
+                sub: user._id,
+                purpose: "reset_password",
+                password_updated_at: user.password_updated_at,
+            },
+            {
+                secret: jwtConstants.resetPasswordSecretKey,
+                expiresIn: jwtConstants.resetPasswordTokenExpiresIn,
+                algorithm: "HS256",
+            }
+        )
+
+        const resetLink = `${jwtConstants.clientURL}/reset-password?token=${token}`;
+
+        console.log(resetLink);
+
+        // await this.mailService.sendResetPasswordEmail(user.email, resetLink);
+
+        return {
+            status: "success",
+            data: {
+                message: "If email exists, reset link has been sent",
+            },
+        };
+
+    }
+
+    async resetPassword(dto: ResetPasswordDto) {
+        let payload: any;
+
+        try {
+            payload = await this.jwtService.verifyAsync(dto.token, {
+                secret: jwtConstants.resetPasswordSecretKey,
+                algorithms: ["HS256"],
+            });
+        } catch (error) {
+            throw new UnauthorizedException({
+                "status": "error",
+                "message": "Invalid or expired token"
+            });
+        }
+
+        if (payload.purpose !== "reset_password") {
+            throw new UnauthorizedException({
+                "status": "error",
+                "message": "Invalid token purpose"
+            });
+        }
+
+        const user = await this.userModel.findById(payload.sub);
+        if (!user) {
+            throw new UnauthorizedException({
+                "status": "error",
+                "message": "User not found"
+            });
+        }
+
+        if (
+            !user.password_updated_at ||
+            payload.password_updated_at !== user.password_updated_at.toISOString()
+        ) {
+            throw new UnauthorizedException({
+                "status": "error",
+                "message": "Token expired or already used"
+            });
+        }
+
+        const newHashedPassword = await bcrypt.hash(dto.newPassword, 10);
+
+        const isMatch = await bcrypt.compare(newHashedPassword, user.password_hash);
+        if (isMatch) throw new BadRequestException({
+            "status": "error",
+            "message": "The new password is the same as the old password"
+        });
+
+        await this.userModel.findByIdAndUpdate(
+            payload.sub,
+            {
+                $set: {
+                    password_hash: newHashedPassword,
+                    password_updated_at: new Date(),
+                },
+            }
+        );
+
+        return {
+            status: "success",
+            data: {
+                message: "Password reset successfully"
+            }
+        };
     }
 }
