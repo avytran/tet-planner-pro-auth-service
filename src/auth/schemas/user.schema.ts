@@ -23,9 +23,13 @@ export const UserSchema = new mongoose.Schema({
         required: true,
         default: 0,
     },
+    
+    password_updated_at: {
+        type: Date
+    }
 }, {
     timestamps: {
-        createdAt: "created_at", 
+        createdAt: "created_at",
         updatedAt: "updated_at",
     },
 });

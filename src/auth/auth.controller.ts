@@ -6,6 +6,8 @@ import { JwtPayload } from "./interfaces/jwtPayload.interface";
 import { JwtAuthGuard } from "./jwt/jwtAuth.guard";
 import { RefreshTokenDto } from "./dto/refreshToken.dto";
 import { DbResult } from "./interfaces/dbResult";
+import { ForgotPasswordDto } from "./dto/forgotPassword.dto";
+import { ResetPasswordDto } from "./dto/resetPassword.dto";
 
 @Controller("v1/auth")
 export class AuthController {
@@ -31,5 +33,15 @@ export class AuthController {
     @Post("refresh-token")
     async refreshToken(@Body() dto: RefreshTokenDto) {
         return this.authService.refreshToken(dto.refreshToken);
+    }
+
+    @Post("forgot-password")
+    async forgotPassword(@Body() dto: ForgotPasswordDto) {
+        return this.authService.forgotPassword(dto);
+    }
+
+    @Post("reset-password")
+    async resetPassword(@Body() dto: ResetPasswordDto) {
+        return this.authService.resetPassword(dto);
     }
 }

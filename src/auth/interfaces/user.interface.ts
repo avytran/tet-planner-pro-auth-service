@@ -5,6 +5,7 @@ export interface IUser extends Document {
     password_hash: string;
     full_name: string;
     total_budget: number;
+    password_updated_at: Date;
     created_at: Date;
     updated_at: Date;
 }
@@ -14,6 +15,7 @@ export interface User {
     email: string;
     fullName: string;
     totalBudget: number;
+    passwordUpdatedAt: Date;
     createdAt: Date;
     updatedAt: Date;
 }
