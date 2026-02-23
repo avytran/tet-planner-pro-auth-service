@@ -181,9 +181,9 @@ export class AuthService {
 
         const resetLink = `${jwtConstants.clientURL}/reset-password?token=${token}`;
 
-        console.log(resetLink);
+        // console.log(resetLink);
 
-        // await this.mailService.sendResetPasswordEmail(user.email, resetLink);
+        await this.mailService.sendResetPasswordEmail(user.email, resetLink);
 
         return {
             status: "success",
