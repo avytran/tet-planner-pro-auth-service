@@ -13,6 +13,7 @@ import { DbResult } from "./interfaces/dbResult";
 import { ForgotPasswordDto } from "./dto/forgotPassword.dto";
 import { ResetPasswordDto } from "./dto/resetPassword.dto";
 import { MailService } from "src/mail/mail.service";
+import { AuthErrorCode } from "./enums/authErrorCode.enum";
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
         if (existingUser) {
             throw new BadRequestException({
                 status: 'error',
+                code: AuthErrorCode.EMAIL_EXISTS,
                 message: 'Email already exists',
             });
         }
@@ -58,14 +60,16 @@ export class AuthService {
     async login(email: string, password: string) {
         const user = await this.userModel.findOne({ email });
         if (!user) throw new UnauthorizedException({
-            "status": "error",
-            "message": "Unauthorized"
+            status: "error",
+            code: AuthErrorCode.INVALID_CREDENTIALS,
+            message: "Unauthorized"
         });
 
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) throw new UnauthorizedException({
-            "status": "error",
-            "message": "Unauthorized"
+            status: "error",
+            code: AuthErrorCode.INVALID_CREDENTIALS,
+            message: "Unauthorized"
         });
 
         const payload: JwtPayload = {
@@ -111,9 +115,18 @@ export class AuthService {
                 data: tokens
             }
         } catch (error) {
+            if (error.name === "TokenExpiredError") {
+                throw new UnauthorizedException({
+                    status: "error",
+                    errorCode: AuthErrorCode.TOKEN_EXPIRED,
+                    message: "Refresh token expired",
+                });
+            }
+
             throw new UnauthorizedException({
-                "status": "error",
-                "message": "Invalid refresh token"
+                status: "error",
+                errorCode: AuthErrorCode.TOKEN_INVALID,
+                message: "Invalid refresh token",
             });
         }
     }
@@ -203,24 +216,35 @@ export class AuthService {
                 algorithms: ["HS256"],
             });
         } catch (error) {
+            if (error.name === "TokenExpiredError") {
+                throw new UnauthorizedException({
+                    status: "error",
+                    errorCode: AuthErrorCode.TOKEN_EXPIRED,
+                    message: "Reset token expired",
+                });
+            }
+
             throw new UnauthorizedException({
-                "status": "error",
-                "message": "Invalid or expired token"
+                status: "error",
+                errorCode: AuthErrorCode.TOKEN_INVALID,
+                message: "Invalid reset token",
             });
         }
 
         if (payload.purpose !== "reset_password") {
             throw new UnauthorizedException({
-                "status": "error",
-                "message": "Invalid token purpose"
+                status: "error",
+                errorCode: AuthErrorCode.TOKEN_INVALID,
+                message: "Invalid token purpose",
             });
         }
 
         const user = await this.userModel.findById(payload.sub);
         if (!user) {
             throw new UnauthorizedException({
-                "status": "error",
-                "message": "User not found"
+                status: "error",
+                errorCode: AuthErrorCode.USER_NOT_FOUND,
+                message: "User not found",
             });
         }
 
@@ -229,18 +253,22 @@ export class AuthService {
             payload.password_updated_at !== user.password_updated_at.toISOString()
         ) {
             throw new UnauthorizedException({
-                "status": "error",
-                "message": "Token expired or already used"
+                status: "error",
+                errorCode: AuthErrorCode.RESET_TOKEN_USED,
+                message: "Token already used or expired",
             });
         }
 
         const newHashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
         const isMatch = await bcrypt.compare(newHashedPassword, user.password_hash);
-        if (isMatch) throw new BadRequestException({
-            "status": "error",
-            "message": "The new password is the same as the old password"
-        });
+        if (isMatch) {
+            throw new BadRequestException({
+                status: "error",
+                errorCode: AuthErrorCode.SAME_PASSWORD,
+                message: "New password must be different from old password",
+            });
+        }
 
         await this.userModel.findByIdAndUpdate(
             payload.sub,
