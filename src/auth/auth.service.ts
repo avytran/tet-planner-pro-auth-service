@@ -12,7 +12,7 @@ import { ConfigService } from "@nestjs/config";
 import { DbResult } from "./interfaces/dbResult";
 import { ForgotPasswordDto } from "./dto/forgotPassword.dto";
 import { ResetPasswordDto } from "./dto/resetPassword.dto";
-import { MailService } from "src/mail/mail.service";
+import { MailService } from "../mail/mail.service";
 import { AuthErrorCode } from "./enums/authErrorCode.enum";
 
 @Injectable()
